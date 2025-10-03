@@ -1,0 +1,101 @@
+/*
+  This is a procedure to add the data from the data files into their respective databases from the data sources. This does not change the data inside the files
+  =====================================
+  to run this procedure type :-
+  exec bronze.load_bronze;
+*/
+create or alter procedure bronze.load_bronze as 
+begin
+	declare @start_time Datetime, @end_time datetime, @batch_start_time Datetime, @batch_end_time Datetime;
+	begin try
+		set @batch_start_time = GETDATE();
+		print '==========================================';
+		print 'loading Bronze layer';
+		print '==========================================';
+
+		print 'loading crm tables';
+		print '==========================================';
+		set @start_time = getdate();
+		print '^_^ Truncating the crm_cust_info';
+		TRUNCATE table bronze.crm_cust_info;
+		print 'Inserting the data into crm_cust_info';
+
+		bulk insert bronze.crm_cust_info
+		from 'C:\Users\sivas\OneDrive\Pictures\sql-data-warehouse-project\datasets\source_crm\cust_info.csv'
+		with (
+			firstrow=2,
+			fieldterminator=',',
+			tablock
+		);
+		set @end_time = getdate();
+		print 'Time take for inserting the data - ' + cast(datediff(second, @start_time, @end_time) AS NVARCHAR) + ' seconds';
+		print '============================================';
+
+		/*table-2*/
+		SET @start_time = GETDATE();
+		PRINT '>> Truncating Table: bronze.prd_info';
+		TRUNCATE table bronze.pro_info;
+		PRINT '>> Inserting Data Into: bronze.prd_info';
+		bulk insert bronze.pro_info
+		from 'C:\Users\sivas\OneDrive\Pictures\sql-data-warehouse-project\datasets\source_crm\prd_info.csv'
+		with (
+			firstrow=2,
+			fieldterminator=',',
+			tablock
+		);
+		SET @end_time = GETDATE();
+		PRINT '>> Load Duration: ' + CAST(DATEDIFF(second, @start_time, @end_time) AS NVARCHAR) + ' seconds';
+		PRINT '>> -------------';
+
+		TRUNCATE table bronze.sales_details;
+		bulk insert bronze.sales_details
+		from 'C:\Users\sivas\OneDrive\Pictures\sql-data-warehouse-project\datasets\source_crm\sales_details.csv'
+		with(
+			firstrow=2,
+			fieldterminator=',',
+			tablock
+		);
+
+		print '========================================';
+		print 'Loading the EMP tables';
+
+		TRUNCATE table bronze.cust_az12;
+		bulk insert bronze.cust_az12
+		from 'C:\Users\sivas\OneDrive\Pictures\sql-data-warehouse-project\datasets\source_erp\CUST_AZ12.csv'
+		with(
+			firstrow=2,
+			fieldterminator=',',
+			tablock
+		);
+
+		TRUNCATE table bronze.loc_a101;
+		bulk insert bronze.loc_a101
+		from 'C:\Users\sivas\OneDrive\Pictures\sql-data-warehouse-project\datasets\source_erp\LOC_A101.csv'
+		with(
+			firstrow=2,
+			fieldterminator=',',
+			tablock
+		);
+
+		TRUNCATE table bronze.px_cat_g1v2;
+		bulk insert bronze.px_cat_g1v2
+		from 'C:\Users\sivas\OneDrive\Pictures\sql-data-warehouse-project\datasets\source_erp\PX_CAT_G1V2.csv'
+		with(
+			firstrow=2,
+			fieldterminator=',',
+			tablock
+		);
+		print 'EMP tables loaded successfully';
+		set @batch_end_time = getdate();
+		print '=======================================';
+		print 'Bronze layer is loaded successfully';
+		print ' Total duration is - ' + cast(datediff(second, @batch_start_time, @batch_end_time) as NVARCHAR) + ' seconds';
+	end try
+	begin catch
+		print '**************Error Occured**************';
+		print 'Error message = ' + error_message();
+		print 'error number = ' + cast(error_number() as nvarchar);
+		print 'Error state = ' + cast(error_state() as nvarchar);
+		print '*****************************************';
+	end catch
+END
